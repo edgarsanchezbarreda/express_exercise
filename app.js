@@ -1,18 +1,11 @@
 const express = require('express');
-const ExpressError = require('./error');
-
 const app = express();
+const ExpressError = require('./error');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ############################
-
-// const integerArray = (arr) => {
-// 	arr.split(',').map(function(item) {
-// 		return parseInt(item, 10);
-// 	});
-// };
 
 const average = (array) => array.reduce((a, b) => a + b) / array.length;
 
@@ -24,40 +17,37 @@ app.get('/mean', function mean(req, res, next) {
 	let queryArray = req.query.nums.split(',').map(function(item) {
 		return parseInt(item, 10);
 	});
-
 	let avg = average(queryArray);
+	console.log(res);
 
-	console.log(req.query);
-	console.log(req.query.nums);
-	console.log(queryArray);
-	console.log(avg);
-	try {
-		if (!avg || req.query != nums) {
-			throw new ExpressError('Invalid query.', 404);
-		}
-		return res.json({
-			response: {
-				operation: 'mean',
-				value: avg
-			}
-		});
-	} catch (e) {
-		return next(e);
+	if (queryArray.includes(NaN)) {
+		const nonNumber = queryArray.find((n) => n === NaN);
+		throw new ExpressError(`${nonNumber} is not a number.`, 400);
 	}
+	return res.json({
+		response: {
+			operation: 'mean',
+			value: avg
+		}
+	});
 });
 
 // Error Handling
-app.use((req, res, next) => {
-	const e = new ExpressError('Page Not Found', 404);
-	next(e);
+app.use(function(req, res, next) {
+	const err = new ExpressError('Not Found', 404);
+
+	// pass the error to the next piece of middleware
+	return next(err);
 });
 
-app.use((error, req, res, next) => {
-	let status = error.status || 500;
-	let message = error.msg;
+/** general error handler */
 
-	return res.status(status).json({
-		error: { message, status }
+app.use(function(err, req, res, next) {
+	res.status(err.status || 500);
+
+	return res.json({
+		error: err,
+		message: err.message
 	});
 });
 
